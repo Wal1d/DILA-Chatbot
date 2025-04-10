@@ -8,9 +8,10 @@ type ChatInputProps = {
   onSendMessage: (message: string) => void;
   onReformulate: () => void;
   disabled?: boolean;
+  alwaysConfirm?: boolean;
 };
 
-const ChatInput = ({ onSendMessage, onReformulate, disabled = false }: ChatInputProps) => {
+const ChatInput = ({ onSendMessage, onReformulate, disabled = false, alwaysConfirm = true }: ChatInputProps) => {
   const [input, setInput] = useState('');
   const [confirmMode, setConfirmMode] = useState(false);
   const [pendingMessage, setPendingMessage] = useState('');
@@ -23,9 +24,13 @@ const ChatInput = ({ onSendMessage, onReformulate, disabled = false }: ChatInput
         setInput('');
         setPendingMessage('');
         setConfirmMode(false);
-      } else {
+      } else if (alwaysConfirm) {
         setPendingMessage(input);
         setConfirmMode(true);
+      } else {
+        // If confirmation is disabled, send directly
+        onSendMessage(input);
+        setInput('');
       }
     }
   };

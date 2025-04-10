@@ -4,6 +4,7 @@ import { useToast } from '@/hooks/use-toast';
 import ChatHeader from './ChatHeader';
 import ChatBubble from './ChatBubble';
 import ChatInput from './ChatInput';
+import ChatHistorySidebar from './ChatHistorySidebar';
 
 export type Message = {
   id: string;
@@ -12,46 +13,131 @@ export type Message = {
   timestamp: string;
 };
 
+export type Conversation = {
+  id: string;
+  title: string;
+  messages: Message[];
+  timestamp: string;
+};
+
 const DILAChatbot = () => {
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [currentConversationId, setCurrentConversationId] = useState<string>('');
   const [isWaiting, setIsWaiting] = useState(false);
+  const [alwaysConfirm, setAlwaysConfirm] = useState(true);
   const { toast } = useToast();
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Load messages from localStorage on component mount
+  // Get current messages
+  const currentMessages = conversations.find(c => c.id === currentConversationId)?.messages || [];
+
+  // Load conversations from localStorage on component mount
   useEffect(() => {
-    const savedMessages = localStorage.getItem('dila-chat-messages');
-    if (savedMessages) {
+    const savedConversations = localStorage.getItem('dila-chat-conversations');
+    const savedSettings = localStorage.getItem('dila-chat-settings');
+    
+    // Load settings
+    if (savedSettings) {
       try {
-        setMessages(JSON.parse(savedMessages));
+        const settings = JSON.parse(savedSettings);
+        if (typeof settings.alwaysConfirm === 'boolean') {
+          setAlwaysConfirm(settings.alwaysConfirm);
+        }
       } catch (error) {
-        console.error('Failed to parse saved messages', error);
+        console.error('Failed to parse saved settings', error);
+      }
+    }
+
+    // Load conversations
+    if (savedConversations) {
+      try {
+        const loadedConversations = JSON.parse(savedConversations);
+        setConversations(loadedConversations);
+        
+        // Set current conversation to the most recent one
+        if (loadedConversations.length > 0) {
+          setCurrentConversationId(loadedConversations[0].id);
+        } else {
+          createNewConversation();
+        }
+      } catch (error) {
+        console.error('Failed to parse saved conversations', error);
+        createNewConversation();
       }
     } else {
-      // Add welcome message if no saved messages
-      const welcomeMessage: Message = {
-        id: 'welcome',
-        text: "Bonjour, je suis l'assistant virtuel de la DILA. Comment puis-je vous aider avec vos questions légales et administratives aujourd'hui ?",
-        isUser: false,
-        timestamp: new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
-      };
-      setMessages([welcomeMessage]);
+      createNewConversation();
     }
   }, []);
 
-  // Save messages to localStorage whenever they change
+  // Save conversations to localStorage whenever they change
   useEffect(() => {
-    if (messages.length > 0) {
-      localStorage.setItem('dila-chat-messages', JSON.stringify(messages));
+    if (conversations.length > 0) {
+      localStorage.setItem('dila-chat-conversations', JSON.stringify(conversations));
     }
-  }, [messages]);
+  }, [conversations]);
+
+  // Save settings whenever they change
+  useEffect(() => {
+    localStorage.setItem('dila-chat-settings', JSON.stringify({
+      alwaysConfirm
+    }));
+  }, [alwaysConfirm]);
 
   // Scroll to bottom whenever messages change
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  }, [currentMessages]);
+
+  const createNewConversation = () => {
+    const newId = Date.now().toString();
+    const newConversation: Conversation = {
+      id: newId,
+      title: "Nouvelle conversation",
+      messages: [{
+        id: 'welcome-' + newId,
+        text: "Bonjour, je suis l'assistant virtuel de la DILA. Comment puis-je vous aider avec vos questions légales et administratives aujourd'hui ?",
+        isUser: false,
+        timestamp: new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
+      }],
+      timestamp: new Date().toLocaleDateString('fr-FR', { 
+        day: '2-digit', 
+        month: '2-digit',
+        year: 'numeric', 
+        hour: '2-digit', 
+        minute: '2-digit' 
+      })
+    };
+
+    setConversations(prev => [newConversation, ...prev]);
+    setCurrentConversationId(newId);
+    
+    toast({
+      title: "Nouvelle conversation",
+      description: "Une nouvelle conversation a été démarrée.",
+    });
+  };
+
+  const updateConversationTitle = (id: string, firstMessage: string) => {
+    // Create a title from the first user message (max 30 chars)
+    const title = firstMessage.length > 30 
+      ? firstMessage.substring(0, 30) + '...' 
+      : firstMessage;
+    
+    setConversations(prev => 
+      prev.map(conv => 
+        conv.id === id 
+          ? { ...conv, title } 
+          : conv
+      )
+    );
+  };
 
   const handleSendMessage = (text: string) => {
+    // If there's no current conversation, create one
+    if (!currentConversationId) {
+      createNewConversation();
+    }
+
     const newUserMessage: Message = {
       id: Date.now().toString(),
       text,
@@ -59,7 +145,33 @@ const DILAChatbot = () => {
       timestamp: new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
     };
     
-    setMessages(prev => [...prev, newUserMessage]);
+    // Add message to current conversation
+    setConversations(prev => 
+      prev.map(conv => {
+        if (conv.id === currentConversationId) {
+          const updatedMessages = [...conv.messages, newUserMessage];
+          
+          // If this is the first user message, update the conversation title
+          if (!conv.messages.some(m => m.isUser)) {
+            updateConversationTitle(currentConversationId, text);
+          }
+          
+          return {
+            ...conv,
+            messages: updatedMessages,
+            timestamp: new Date().toLocaleDateString('fr-FR', { 
+              day: '2-digit', 
+              month: '2-digit',
+              year: 'numeric', 
+              hour: '2-digit', 
+              minute: '2-digit' 
+            })
+          };
+        }
+        return conv;
+      })
+    );
+
     setIsWaiting(true);
 
     // Simulate response (in a real app, this would be an API call)
@@ -72,14 +184,33 @@ const DILAChatbot = () => {
         timestamp: new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
       };
       
-      setMessages(prev => [...prev, newBotMessage]);
+      setConversations(prev => 
+        prev.map(conv => {
+          if (conv.id === currentConversationId) {
+            return {
+              ...conv,
+              messages: [...conv.messages, newBotMessage]
+            };
+          }
+          return conv;
+        })
+      );
+      
       setIsWaiting(false);
     }, 1000);
   };
 
   const handleReformulate = () => {
-    // Find the last user message
-    const lastUserMessageIndex = [...messages].reverse().findIndex(m => m.isUser);
+    if (!currentConversationId || currentMessages.length === 0) {
+      toast({
+        title: "Aucune question à reformuler",
+        description: "Vous devez d'abord poser une question.",
+      });
+      return;
+    }
+
+    // Find the last user message in current conversation
+    const lastUserMessageIndex = [...currentMessages].reverse().findIndex(m => m.isUser);
     
     if (lastUserMessageIndex === -1) {
       toast({
@@ -89,25 +220,17 @@ const DILAChatbot = () => {
       return;
     }
 
-    const lastUserMessage = [...messages].reverse()[lastUserMessageIndex];
+    const lastUserMessage = [...currentMessages].reverse()[lastUserMessageIndex];
     const reformulatedText = `Pouvez-vous reformuler autrement : "${lastUserMessage.text}"`;
     
     handleSendMessage(reformulatedText);
   };
 
   const handleClearHistory = () => {
-    setMessages([]);
-    localStorage.removeItem('dila-chat-messages');
+    setConversations([]);
+    localStorage.removeItem('dila-chat-conversations');
     
-    // Add welcome message again
-    const welcomeMessage: Message = {
-      id: 'welcome-new',
-      text: "Bonjour, je suis l'assistant virtuel de la DILA. Comment puis-je vous aider avec vos questions légales et administratives aujourd'hui ?",
-      isUser: false,
-      timestamp: new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
-    };
-    
-    setMessages([welcomeMessage]);
+    createNewConversation();
     
     toast({
       title: "Historique effacé",
@@ -115,26 +238,17 @@ const DILAChatbot = () => {
     });
   };
 
-  const handleNewConversation = () => {
-    // Save the current conversation if needed
-    
-    // Start a new conversation
-    setMessages([]);
-    localStorage.removeItem('dila-chat-messages');
-    
-    // Add welcome message for new conversation
-    const welcomeMessage: Message = {
-      id: 'welcome-new-conversation',
-      text: "Bonjour, comment puis-je vous aider aujourd'hui ?",
-      isUser: false,
-      timestamp: new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
-    };
-    
-    setMessages([welcomeMessage]);
-    
+  const handleSelectConversation = (id: string) => {
+    setCurrentConversationId(id);
+  };
+
+  const handleToggleConfirmation = () => {
+    setAlwaysConfirm(prev => !prev);
     toast({
-      title: "Nouvelle conversation",
-      description: "Une nouvelle conversation a été démarrée.",
+      title: alwaysConfirm ? "Confirmation désactivée" : "Confirmation activée",
+      description: alwaysConfirm 
+        ? "Vos messages seront envoyés directement." 
+        : "Vos messages seront confirmés avant d'être envoyés.",
     });
   };
 
@@ -164,39 +278,59 @@ const DILAChatbot = () => {
   };
 
   return (
-    <div className="flex flex-col border rounded-lg shadow-md h-full max-h-[600px]">
-      <ChatHeader 
-        onClearHistory={handleClearHistory} 
-        onNewConversation={handleNewConversation} 
+    <div className="flex h-full rounded-lg shadow-md overflow-hidden">
+      {/* Chat history sidebar */}
+      <ChatHistorySidebar 
+        onStartNewConversation={createNewConversation}
+        onClearHistory={handleClearHistory}
+        currentConversationId={currentConversationId}
+        conversations={conversations.map(c => ({
+          id: c.id,
+          title: c.title,
+          timestamp: c.timestamp
+        }))}
+        onSelectConversation={handleSelectConversation}
+        messages={currentMessages}
       />
       
-      <div className="flex-1 overflow-y-auto p-4 bg-white">
-        {messages.map((message) => (
-          <ChatBubble 
-            key={message.id}
-            message={message.text}
-            isUser={message.isUser}
-            timestamp={message.timestamp}
-          />
-        ))}
-        
-        {isWaiting && (
-          <div className="flex items-center gap-1 text-dila-blue mb-4">
-            <div className="h-2 w-2 bg-dila-blue rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
-            <div className="h-2 w-2 bg-dila-blue rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-            <div className="h-2 w-2 bg-dila-blue rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
-          </div>
-        )}
-        
-        <div ref={messagesEndRef} />
-      </div>
-      
-      <div className="border-t p-4 bg-gray-50">
-        <ChatInput 
-          onSendMessage={handleSendMessage} 
-          onReformulate={handleReformulate}
-          disabled={isWaiting}
+      {/* Main chat area */}
+      <div className="flex flex-col border flex-1">
+        <ChatHeader 
+          onClearHistory={handleClearHistory} 
+          onNewConversation={createNewConversation}
+          alwaysConfirm={alwaysConfirm}
+          onToggleConfirmation={handleToggleConfirmation}
         />
+        
+        <div className="flex-1 overflow-y-auto p-4 bg-white">
+          {currentMessages.map((message) => (
+            <ChatBubble 
+              key={message.id}
+              message={message.text}
+              isUser={message.isUser}
+              timestamp={message.timestamp}
+            />
+          ))}
+          
+          {isWaiting && (
+            <div className="flex items-center gap-1 text-dila-blue mb-4">
+              <div className="h-2 w-2 bg-dila-blue rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+              <div className="h-2 w-2 bg-dila-blue rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+              <div className="h-2 w-2 bg-dila-blue rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+            </div>
+          )}
+          
+          <div ref={messagesEndRef} />
+        </div>
+        
+        <div className="border-t p-4 bg-gray-50">
+          <ChatInput 
+            onSendMessage={handleSendMessage} 
+            onReformulate={handleReformulate}
+            disabled={isWaiting}
+            alwaysConfirm={alwaysConfirm}
+          />
+        </div>
       </div>
     </div>
   );

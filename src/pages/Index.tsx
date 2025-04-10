@@ -26,9 +26,9 @@ const Index = () => {
       
       {/* Main content */}
       <main className="flex-1 container mx-auto py-8 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-3xl mx-auto">
+        <div className="mx-auto">
           <h2 className="text-2xl font-bold text-dila-blue mb-6">Assistance virtuelle</h2>
-          <div className="h-[600px]">
+          <div className="h-[600px] shadow-md rounded-lg overflow-hidden">
             <DILAChatbot />
           </div>
           <div className="mt-6 bg-dila-gray rounded-lg p-4 text-sm text-gray-600">
