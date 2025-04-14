@@ -48,9 +48,9 @@ export function useChatState() {
     if (savedConversations) {
       try {
         const loadedConversations = JSON.parse(savedConversations);
-        // Filter out conversations with only the welcome message
+        // Filter out conversations with only the welcome message or no user messages
         const validConversations = loadedConversations.filter(
-          (conv: Conversation) => conv.messages.length > 1 || conv.messages.some((m: Message) => m.isUser)
+          (conv: Conversation) => conv.messages.some((m: Message) => m.isUser)
         );
         
         setConversations(validConversations);
@@ -76,7 +76,7 @@ export function useChatState() {
     if (conversations.length > 0) {
       // Filter out conversations with only the welcome message before saving
       const validConversations = conversations.filter(
-        conv => conv.messages.length > 1 || conv.messages.some(m => m.isUser)
+        conv => conv.messages.some(m => m.isUser)
       );
       
       localStorage.setItem('dila-chat-conversations', JSON.stringify(validConversations));
@@ -151,13 +151,13 @@ export function useChatState() {
         if (conv.id === currentConversationId) {
           const updatedMessages = [...conv.messages, newUserMessage];
           
-          // If this is the first user message, update the conversation title
-          if (!conv.messages.some(m => m.isUser)) {
-            updateConversationTitle(currentConversationId, text);
-          }
+          // If this is the first user message, update the conversation title immediately
+          const isFirstUserMessage = !conv.messages.some(m => m.isUser);
+          const updatedTitle = isFirstUserMessage ? text : conv.title;
           
           return {
             ...conv,
+            title: updatedTitle.length > 30 ? updatedTitle.substring(0, 30) + '...' : updatedTitle,
             messages: updatedMessages,
             timestamp: new Date().toLocaleDateString('fr-FR', { 
               day: '2-digit', 

@@ -58,7 +58,7 @@ const ChatHistorySidebar = ({
                         : ""
                     }`}
                   >
-                    <div>
+                    <div className="w-full">
                       <div className="font-medium truncate">{conversation.title}</div>
                       <div className="text-xs text-gray-500">{conversation.timestamp}</div>
                     </div>
