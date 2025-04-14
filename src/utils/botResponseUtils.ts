@@ -1,27 +1,31 @@
-
 /**
- * Simulated bot response - in a real app, this would be replaced by an API call
+ * Get bot response from the API
  */
-export const getBotResponse = (userMessage: string): string => {
-  if (userMessage.toLowerCase().includes('bonjour') || userMessage.toLowerCase().includes('salut')) {
-    return "Bonjour ! Comment puis-je vous aider aujourd'hui ?";
-  }
-  
-  if (userMessage.toLowerCase().includes('merci')) {
-    return "Je vous en prie. Y a-t-il autre chose que je peux faire pour vous ?";
-  }
-  
-  if (userMessage.toLowerCase().includes('carte d\'identité') || userMessage.toLowerCase().includes('passeport')) {
-    return "Pour les questions concernant les cartes d'identité et les passeports, je vous invite à consulter le site service-public.fr ou à contacter votre mairie. Vous avez besoin de formulaires spécifiques et de pièces justificatives.";
-  }
-  
-  if (userMessage.toLowerCase().includes('impôt') || userMessage.toLowerCase().includes('taxe')) {
-    return "Pour les questions fiscales, je vous recommande de consulter le site impots.gouv.fr ou de contacter votre centre des finances publiques local. Vous pourrez y trouver des informations sur les déclarations, les paiements et les déductions fiscales.";
-  }
-  
-  if (userMessage.toLowerCase().includes('reformuler')) {
-    return "Je vais essayer de reformuler votre demande. Pourriez-vous me préciser quel aspect vous souhaitez que je reformule ?";
-  }
+export const getBotResponse = async (userMessage: string): Promise<string> => {
+  try {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}${process.env.NEXT_PUBLIC_CHAT_ENDPOINT}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        queryapi: userMessage,
+        n_chunks: parseInt(process.env.NEXT_PUBLIC_DEFAULT_CHUNKS || '15'),
+        modelName: process.env.NEXT_PUBLIC_DEFAULT_MODEL || 'Llama3.1',
+        streaming: parseInt(process.env.NEXT_PUBLIC_DEFAULT_STREAMING || '1'),
+        audience: process.env.NEXT_PUBLIC_DEFAULT_AUDIENCE || 'Particuliers',
+        reformulation: true
+      })
+    });
 
-  return "Merci pour votre question. Pour obtenir des informations précises sur ce sujet, je vous invite à consulter le site service-public.fr ou à contacter directement le service administratif concerné. Avez-vous besoin d'autres renseignements ?";
+    if (!response.ok) {
+      throw new Error('Failed to fetch response');
+    }
+
+    const data = await response.json();
+    return data.response;
+  } catch (error) {
+    console.error('Error fetching bot response:', error);
+    return "Désolé, une erreur est survenue. Veuillez réessayer.";
+  }
 };

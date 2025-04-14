@@ -47,7 +47,7 @@ export const useChatActions = ({
     return newId;
   };
 
-  const handleSendMessage = (text: string) => {
+  const handleSendMessage = async (text: string) => {
     // If there's no current conversation, create one
     if (!currentConversationId) {
       const newId = createNewConversation();
@@ -88,15 +88,9 @@ export const useChatActions = ({
       })
     );
 
-    // For reformulation mode, add a delay before starting the response
-    const responseDelay = alwaysConfirm ? 2000 : 1000;
-
-    // Simulate response (in a real app, this would be an API call)
-    setTimeout(() => {
-      // If reformulation is enabled, generate a reformulated version
-      const botResponse = alwaysConfirm 
-        ? `Reformulation: ${text}\n\n${getBotResponse(text)}`
-        : getBotResponse(text);
+    try {
+      // Get bot response from API
+      const botResponse = await getBotResponse(text);
 
       const newBotMessage: Message = {
         id: (Date.now() + 1).toString(),
@@ -116,7 +110,14 @@ export const useChatActions = ({
           return conv;
         })
       );
-    }, responseDelay);
+    } catch (error) {
+      console.error('Error getting bot response:', error);
+      toast({
+        title: "Erreur",
+        description: "Une erreur est survenue lors de la communication avec le serveur.",
+        variant: "destructive"
+      });
+    }
   };
 
   const handleReformulate = (currentMessages: Message[]) => {
