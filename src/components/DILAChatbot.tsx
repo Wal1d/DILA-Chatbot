@@ -52,11 +52,16 @@ const DILAChatbot = () => {
     if (savedConversations) {
       try {
         const loadedConversations = JSON.parse(savedConversations);
-        setConversations(loadedConversations);
+        // Filter out conversations with only the welcome message
+        const validConversations = loadedConversations.filter(
+          (conv: Conversation) => conv.messages.length > 1 || conv.messages.some((m: Message) => m.isUser)
+        );
+        
+        setConversations(validConversations);
         
         // Set current conversation to the most recent one
-        if (loadedConversations.length > 0) {
-          setCurrentConversationId(loadedConversations[0].id);
+        if (validConversations.length > 0) {
+          setCurrentConversationId(validConversations[0].id);
         } else {
           createNewConversation();
         }
@@ -72,7 +77,12 @@ const DILAChatbot = () => {
   // Save conversations to localStorage whenever they change
   useEffect(() => {
     if (conversations.length > 0) {
-      localStorage.setItem('dila-chat-conversations', JSON.stringify(conversations));
+      // Filter out conversations with only the welcome message before saving
+      const validConversations = conversations.filter(
+        conv => conv.messages.length > 1 || conv.messages.some(m => m.isUser)
+      );
+      
+      localStorage.setItem('dila-chat-conversations', JSON.stringify(validConversations));
     }
   }, [conversations]);
 
@@ -110,11 +120,6 @@ const DILAChatbot = () => {
 
     setConversations(prev => [newConversation, ...prev]);
     setCurrentConversationId(newId);
-    
-    toast({
-      title: "Nouvelle conversation",
-      description: "Une nouvelle conversation a été démarrée.",
-    });
   };
 
   const updateConversationTitle = (id: string, firstMessage: string) => {
@@ -174,9 +179,16 @@ const DILAChatbot = () => {
 
     setIsWaiting(true);
 
+    // For reformulation mode, add a delay before starting the response
+    const responseDelay = alwaysConfirm ? 2000 : 1000;
+
     // Simulate response (in a real app, this would be an API call)
     setTimeout(() => {
-      const botResponse = getBotResponse(text);
+      // If reformulation is enabled, generate a reformulated version
+      const botResponse = alwaysConfirm 
+        ? `Reformulation: ${text}\n\n${getBotResponse(text)}`
+        : getBotResponse(text);
+
       const newBotMessage: Message = {
         id: (Date.now() + 1).toString(),
         text: botResponse,
@@ -197,7 +209,7 @@ const DILAChatbot = () => {
       );
       
       setIsWaiting(false);
-    }, 1000);
+    }, responseDelay);
   };
 
   const handleReformulate = () => {
@@ -245,10 +257,10 @@ const DILAChatbot = () => {
   const handleToggleConfirmation = () => {
     setAlwaysConfirm(prev => !prev);
     toast({
-      title: alwaysConfirm ? "Confirmation désactivée" : "Confirmation activée",
+      title: alwaysConfirm ? "Reformulation désactivée" : "Reformulation activée",
       description: alwaysConfirm 
         ? "Vos messages seront envoyés directement." 
-        : "Vos messages seront confirmés avant d'être envoyés.",
+        : "Vos questions seront reformulées automatiquement.",
     });
   };
 
@@ -329,6 +341,7 @@ const DILAChatbot = () => {
             onReformulate={handleReformulate}
             disabled={isWaiting}
             alwaysConfirm={alwaysConfirm}
+            isWaiting={isWaiting}
           />
         </div>
       </div>

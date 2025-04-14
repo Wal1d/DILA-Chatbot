@@ -26,7 +26,7 @@ const ChatHeader = ({
           <Tooltip>
             <TooltipTrigger asChild>
               <div className="flex items-center space-x-2 mr-3">
-                <span className="text-xs text-gray-500">Confirmer les questions</span>
+                <span className="text-xs text-gray-500">Reformuler automatiquement les questions</span>
                 <Switch 
                   checked={alwaysConfirm} 
                   onCheckedChange={onToggleConfirmation}
@@ -36,7 +36,7 @@ const ChatHeader = ({
             </TooltipTrigger>
             <TooltipContent>
               {alwaysConfirm 
-                ? "Vos questions seront confirmées avant envoi" 
+                ? "Vos questions seront reformulées automatiquement" 
                 : "Vos questions seront envoyées directement"}
             </TooltipContent>
           </Tooltip>
