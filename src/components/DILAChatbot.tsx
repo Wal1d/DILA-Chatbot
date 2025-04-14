@@ -5,10 +5,6 @@ import ChatInput from './ChatInput';
 import ChatHistorySidebar from './ChatHistorySidebar';
 import ChatMessages from './ChatMessages';
 import { useChatState } from '@/hooks/useChatState';
-import { getBotResponse } from '@/utils/botResponseUtils';
-
-// Add this to the global scope so it can be used by the hook
-(window as any).getBotResponse = getBotResponse;
 
 const DILAChatbot = () => {
   const {

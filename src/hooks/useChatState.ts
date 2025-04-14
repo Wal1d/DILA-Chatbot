@@ -1,6 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
+import { getBotResponse } from '@/utils/botResponseUtils';
 
 export type Message = {
   id: string;
