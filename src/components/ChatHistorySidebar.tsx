@@ -3,7 +3,7 @@ import React from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { MessageSquarePlus, Trash } from 'lucide-react';
-import { Message } from '@/hooks/useChatState';
+import { Message } from '@/types/chatTypes';
 
 type ChatHistorySidebarProps = {
   messages: Message[];
