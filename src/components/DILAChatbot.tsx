@@ -16,6 +16,7 @@ const DILAChatbot = () => {
     handleSendMessage,
     handleReformulate,
     handleClearHistory,
+    handleDeleteCurrentConversation,
     createNewConversation,
     handleSelectConversation,
     handleToggleConfirmation
@@ -40,7 +41,7 @@ const DILAChatbot = () => {
       {/* Main chat area */}
       <div className="flex flex-col border flex-1">
         <ChatHeader 
-          onClearHistory={handleClearHistory} 
+          onClearHistory={handleDeleteCurrentConversation} 
           onNewConversation={createNewConversation}
           alwaysConfirm={alwaysConfirm}
           onToggleConfirmation={handleToggleConfirmation}

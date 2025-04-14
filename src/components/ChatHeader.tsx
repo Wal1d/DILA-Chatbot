@@ -67,7 +67,7 @@ const ChatHeader = ({
               <Eraser className="h-4 w-4" />
             </Button>
           </TooltipTrigger>
-          <TooltipContent>Effacer l'historique</TooltipContent>
+          <TooltipContent>Effacer cette conversation</TooltipContent>
         </Tooltip>
       </div>
     </div>

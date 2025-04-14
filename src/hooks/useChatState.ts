@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { getBotResponse } from '@/utils/botResponseUtils';
@@ -233,6 +232,32 @@ export function useChatState() {
     handleSendMessage(reformulatedText);
   };
 
+  const handleDeleteCurrentConversation = () => {
+    // Remove the current conversation from the array
+    setConversations(prev => prev.filter(conv => conv.id !== currentConversationId));
+    
+    // If there are remaining conversations, select the first one
+    // Otherwise, create a new conversation
+    setTimeout(() => {
+      if (conversations.length > 1) {
+        // Find the next available conversation (that isn't the current one)
+        const nextConversation = conversations.find(conv => conv.id !== currentConversationId);
+        if (nextConversation) {
+          setCurrentConversationId(nextConversation.id);
+        } else {
+          createNewConversation();
+        }
+      } else {
+        createNewConversation();
+      }
+    }, 0);
+
+    toast({
+      title: "Conversation effacée",
+      description: "La conversation actuelle a été supprimée.",
+    });
+  };
+
   const handleClearHistory = () => {
     setConversations([]);
     localStorage.removeItem('dila-chat-conversations');
@@ -268,6 +293,7 @@ export function useChatState() {
     handleSendMessage,
     handleReformulate,
     handleClearHistory,
+    handleDeleteCurrentConversation,
     createNewConversation,
     handleSelectConversation,
     handleToggleConfirmation
