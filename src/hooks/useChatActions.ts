@@ -58,58 +58,83 @@ export const useChatActions = ({
       id: Date.now().toString(),
       text,
       isUser: true,
-      timestamp: new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
+      timestamp: new Date().toLocaleTimeString('fr-FR', {hour: '2-digit', minute: '2-digit'}),
     };
-    
+
     // Add message to current conversation
-    setConversations(prev => 
-      prev.map(conv => {
-        if (conv.id === currentConversationId) {
-          const updatedMessages = [...conv.messages, newUserMessage];
-          
-          // If this is the first user message, update the conversation title immediately
-          const isFirstUserMessage = !conv.messages.some(m => m.isUser);
-          const updatedTitle = isFirstUserMessage ? text : conv.title;
-          
-          return {
-            ...conv,
-            title: updatedTitle.length > 30 ? updatedTitle.substring(0, 30) + '...' : updatedTitle,
-            messages: updatedMessages,
-            timestamp: new Date().toLocaleDateString('fr-FR', { 
-              day: '2-digit', 
-              month: '2-digit',
-              year: 'numeric', 
-              hour: '2-digit', 
-              minute: '2-digit' 
-            })
-          };
-        }
-        return conv;
-      })
-    );
-
-    try {
-      // Get bot response from API
-      const botResponse = await getBotResponse(text);
-
-      const newBotMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        text: botResponse,
-        isUser: false,
-        timestamp: new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
-      };
-      
-      setConversations(prev => 
+    setConversations(prev =>
         prev.map(conv => {
           if (conv.id === currentConversationId) {
+            const updatedMessages = [...conv.messages, newUserMessage];
+
+            // If this is the first user message, update the conversation title immediately
+            const isFirstUserMessage = !conv.messages.some(m => m.isUser);
+            const updatedTitle = isFirstUserMessage ? text : conv.title;
+
             return {
               ...conv,
-              messages: [...conv.messages, newBotMessage]
+              title: updatedTitle.length > 30 ? updatedTitle.substring(0, 30) + '...' : updatedTitle,
+              messages: updatedMessages,
+              timestamp: new Date().toLocaleDateString('fr-FR', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+              })
             };
           }
           return conv;
         })
-      );
+    );
+    try {
+      // Get bot response from API
+      console.log("==== Calling API");
+      // Expect getBotResponse to return the full object: { answer, context, query }
+      const botResponse = await getBotResponse(text, alwaysConfirm);
+      console.log(botResponse);
+
+      // Main bot message (the answer)
+      const newBotMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        text: botResponse.answer, // Use the "answer" field
+        isUser: false,
+        timestamp: new Date().toLocaleTimeString('fr-FR', {hour: '2-digit', minute: '2-digit'}),
+      };
+
+      // (Optional) Add context as a separate message
+      if (botResponse.context) {
+        const contextMessage: Message = {
+          id: (Date.now() + 2).toString(),
+          text: `Contexte : ${botResponse.context}`,
+          isUser: false,
+          timestamp: new Date().toLocaleTimeString('fr-FR', {hour: '2-digit', minute: '2-digit'}),
+        };
+
+        setConversations(prev =>
+            prev.map(conv => {
+              if (conv.id === currentConversationId) {
+                return {
+                  ...conv,
+                  messages: [...conv.messages, newBotMessage, contextMessage]
+                };
+              }
+              return conv;
+            })
+        );
+      } else {
+        setConversations(prev =>
+            prev.map(conv => {
+              if (conv.id === currentConversationId) {
+                return {
+                  ...conv,
+                  messages: [...conv.messages, newBotMessage]
+                };
+              }
+              return conv;
+            })
+        );
+      }
     } catch (error) {
       console.error('Error getting bot response:', error);
       toast({

@@ -9,11 +9,11 @@ const Index = () => {
         <div className="container mx-auto py-4 px-4 sm:px-6 lg:px-8 flex justify-between items-center">
           <div className="flex items-center space-x-2">
             <img 
-              src="https://www.dila.premier-ministre.gouv.fr/IMG/site_logo.png?1622756075" 
+              src="/logo.png"
               alt="DILA Logo" 
               className="h-10"
               onError={(e) => {
-                e.currentTarget.src = "https://www.vie-publique.fr/sites/all/themes/custom/vp/img/layout/logo.svg";
+                e.currentTarget.src = "logo.png";
               }}
             />
             <div>
